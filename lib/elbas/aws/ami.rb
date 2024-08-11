@@ -3,9 +3,6 @@ module Elbas
     class AMI < Base
       include Taggable
 
-      DEPLOY_ID_TAG = 'ELBAS-Deploy-id'.freeze
-      DEPLOY_GROUP_TAG = 'ELBAS-Deploy-group'.freeze
-
       attr_reader :id, :snapshots
 
       def initialize(id, snapshots = [])
@@ -18,11 +15,11 @@ module Elbas
       end
 
       def deploy_id
-        tags[DEPLOY_ID_TAG]
+        tags[deploy_id_tag]
       end
 
       def deploy_group
-        tags[DEPLOY_GROUP_TAG]
+        tags[deploy_group_tag]
       end
 
       def ancestors
@@ -49,23 +46,32 @@ module Elbas
       end
 
       private
-        def aws_namespace
-          ::Aws::EC2
-        end
 
-        def aws_amis_in_deploy_group
-          aws_client.describe_images({
-            owners: ['self'],
-            filters: [{
-              name: "tag:#{DEPLOY_GROUP_TAG}",
-              values: [deploy_group],
-            }]
-          }).images
-        end
+      def aws_namespace
+        ::Aws::EC2
+      end
 
-        def deploy_id_from_aws_tags(tags)
-          tags.detect { |tag| tag.key == DEPLOY_ID_TAG }&.value
-        end
+      def aws_amis_in_deploy_group
+        aws_client.describe_images({
+          owners: ['self'],
+          filters: [{
+            name: "tag:#{deploy_group_tag}",
+            values: [deploy_group],
+          }]
+        }).images
+      end
+
+      def deploy_id_from_aws_tags(tags)
+        tags.detect { |tag| tag.key == DEPLOY_ID_TAG }&.value
+      end
+
+      def deploy_group_tag
+        "#{fetch(:application)}-#{fetch(:stage)}-group"
+      end
+
+      def deploy_id_tag
+        "#{fetch(:application)}-#{fetch(:stage)}"
+      end
     end
   end
 end
